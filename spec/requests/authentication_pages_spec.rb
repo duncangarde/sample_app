@@ -14,19 +14,25 @@ describe "Authentication" do
 
    			it {should have_title('Sign in')}
    			it {should have_selector('div.alert.alert-error', text: 'Invalid')}
-
-   			describe "after visiting another page" do
-        		before { click_link "Home" }
-        		it { should_not have_selector('div.alert.alert-error') }
+        it { should_not have_link('Profile') }
+        it { should_not have_link('Settings') }
+        it { should_not have_link('Users') }
+        it { should_not have_link('Sign out') }
+   			
+        describe "after visiting another page" do
+        	before { click_link "Home" }
+        	it { should_not have_selector('div.alert.alert-error') }
+          it { should_not have_link('Profile') }
+          it { should_not have_link('Settings') }
+          it { should_not have_link('Users') }
+          it { should_not have_link('Sign out') }
    			end
    		end
 
    		describe "with valid information" do
    			let(:user) { FactoryGirl.create(:user) }
    			before do
-   				fill_in "Email", with: user.email.upcase
-   				fill_in "Password", with: user.password
-   				click_button "Sign in"
+   				sign_in(user)
    			end
 
    			it { should have_title(user.name) }
@@ -53,19 +59,26 @@ describe "Authentication" do
           it { should have_title('Sign in') }
         end
 
-
-
-
         describe "after signing in" do
           before do
-          visit edit_user_path(user)
-          fill_in "Email",    with: user.email
-          fill_in "Password", with: user.password
-          click_button "Sign in"
+            visit users_path
+            sign_in(user)
           end
 
           it "should render the desired protected page" do
-            expect(page).to have_title('Edit user')
+            expect(page).to have_title('All users')
+          end
+
+          describe "followed by signout" do
+            before do
+              delete signout_path
+              visit signin_path
+              sign_in(user)
+            end
+
+            it "should render the profile page" do
+              expect(page).to have_title(user.name)
+            end
           end
         end
       end
@@ -97,6 +110,22 @@ describe "Authentication" do
         end
     end
     
+    describe "as signed in user" do
+      let(:user) { FactoryGirl.create(:user) }
+      before {sign_in user, no_capybara: true}
+
+      describe "submitting a GET request to the Users#new action" do
+        before { get new_user_path}
+        specify {expect(response).to redirect_to(root_url) }
+      end
+
+      describe "submitting a POST request to the Users#create action" do
+        before { post users_path(user)}
+        specify {expect(response).to redirect_to(root_url) }
+      end
+     
+    end
+
 
     describe "as wrong user" do
       let(:user) { FactoryGirl.create(:user) }
